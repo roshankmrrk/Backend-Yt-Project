@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import ConnectDB from "./db/index.js";
-
+import { app } from "./app.js";
 dotenv.config();
 ConnectDB()
   .then(() => {
-    App.on("error", (error) => {
+    app.on("error", (error) => {
       console.log("ERROR:- ", error);
       throw error;
     });

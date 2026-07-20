@@ -1,6 +1,6 @@
 // 1st way to make promise resolve reject  wrapper function 
 const asyncHandler =(requstHandler)=>{
-    (req,res,next)=>{
+    return (req,res,next)=>{
         Promise.resolve(requstHandler(req,res,next))
         .catch((err)=> next(err))
     }
