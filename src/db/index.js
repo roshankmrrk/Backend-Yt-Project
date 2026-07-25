@@ -8,7 +8,7 @@ const ConnectDB = async()=>{
      }
      catch(error){
         console.log('Connection time Error',error);
-        console.log("Current Connection URI:", process.env.MONGODB_URI,DB_NAME);
+        console.log("Current Connection URI:", `${process.env.MONGODB_URI}/${DB_NAME}`);
         process.exit(1)
      }
 }

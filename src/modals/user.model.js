@@ -1,7 +1,5 @@
 import mongoose, {Schema} from 'mongoose'
 import bcrypt from "bcrypt"
-import { use } from 'react';
-import { JsonWebTokenError } from 'jsonwebtoken';
 const userSchema = new mongoose.Schema({
     username:{
         type:String,
@@ -18,7 +16,7 @@ const userSchema = new mongoose.Schema({
         lowercase:true,
         trim:true
     },
-    fullname:{
+    fullName:{
         type:String,
         required:true,
         Index:true,
@@ -43,12 +41,19 @@ const userSchema = new mongoose.Schema({
     }
 },{timestamps:true})
 
-userSchema.pre("save", async function(next){
-    if(!this.isModified("password"))return next();
+// async autometically handles next so there is no need of next
+// userSchema.pre("save", async function(next){
+//     if(!this.isModified("password"))return next();
      
-     this.password = await bcrypt.hash(this.password,10)
-    next()
-})
+//      this.password = await bcrypt.hash(this.password,10)
+//     next()
+// })
+
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
+
+    this.password = await bcrypt.hash(this.password, 10);
+});
 
 userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password,this.password)
