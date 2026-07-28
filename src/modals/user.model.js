@@ -1,5 +1,7 @@
 import mongoose, {Schema} from 'mongoose'
 import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
+
 const userSchema = new mongoose.Schema({
     username:{
         type:String,
@@ -66,8 +68,8 @@ userSchema.methods.generateAcessToken = function(){
         {
             _id: this.id,
             password: this.password,
-            username:this.username,
-            fullname:this.fullname
+            username: this.username,
+            fullName: this.fullName,
         },
 
         // Secret Key

@@ -20,4 +20,4 @@ router.route('/logout').post(verifyJWT, logoutUser)
 
 
 
-export default userRouter
+export default router

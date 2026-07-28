@@ -6,22 +6,27 @@ import {UploadOnCloudinary} from "../utils/cloudinary.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
-    const user = User.findOne(userId);
-    if (!userId) {
+    if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+      throw new ApiError(500, "JWT secrets are not configured.");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
       throw new ApiError(401, "User id is not exist.");
     }
 
-    const accessToken = userId.generateAcessToken();
-    const refreshToken = userId.generateRefreshToken();
+    const accessToken = user.generateAcessToken();
+    const refreshToken = user.generateRefreshToken();
 
     user.refreshToken = refreshToken;
-    user.save({validateBeforeSave: false});
+    await user.save({ validateBeforeSave: false });
 
-    return {accessToken, refreshToken};
+    return { accessToken, refreshToken };
   } catch (error) {
+    console.error("generateAccessAndRefreshToken error:", error);
     throw new ApiError(
       402,
-      "Something wrong during acess and refresh token sending."
+      error.message || "Something wrong during acess and refresh token sending."
     );
   }
 };
@@ -108,7 +113,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const {email, username, password} = req.body;
 
   //username or email vailidate
-  if (!email || !password) {
+  if (!(email || password)) {
     throw new ApiError(401, "Username or email required.");
   }
 
@@ -132,7 +137,7 @@ const loginUser = asyncHandler(async (req, res) => {
     user._id
   );
 
-  const loggedInUser = await User.findOne(user._id).select(
+  const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
 
@@ -172,18 +177,16 @@ const logoutUser = asyncHandler(async (req, res) => {
       new: true,
     }
   );
+
   const options = {
     httpOnly: true,
     secure: true,
-  }
-   return res
+  };
+
+  return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
-    .json(
-      new ApiResponse(
-        200,{},"User logged Out" 
-      )
-    );
+    .cookie("accessToken", "", { ...options, maxAge: 0 })
+    .cookie("refreshToken", "", { ...options, maxAge: 0 })
+    .json(new ApiResponse(200, {}, "User logged out"));
 });
 export {registerUser, loginUser, logoutUser};
