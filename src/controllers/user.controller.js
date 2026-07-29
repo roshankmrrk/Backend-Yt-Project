@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import {User} from "../modals/user.model.js";
 import {ApiError} from "../utils/apierror.js";
 import {ApiResponse} from "../utils/apiresponse.js";
@@ -189,4 +190,41 @@ const logoutUser = asyncHandler(async (req, res) => {
     .cookie("refreshToken", "", { ...options, maxAge: 0 })
     .json(new ApiResponse(200, {}, "User logged out"));
 });
-export {registerUser, loginUser, logoutUser};
+
+const refershAccessToken = asyncHandler(async (req,res)=>{
+  const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+  if(incomingRefreshToken){
+    throw new ApiError(401,"Unauthorized Request")
+  }
+  try {
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+  
+    const user = await User.findById(decodedToken?.id)
+  
+    if(!user){
+       throw new ApiError(401,"Invaild Refersh token")
+    }
+  
+    if(incomingRefreshToken !== user?.refreshToken){
+      throw new ApiError (401, "Refersh Token is expired or used")
+    }
+    const options= {httpOnly:true , secure:true }
+  
+    const {accessToken, newRefershToken} =  await generateAccessAndRefreshToken(user._id)
+  
+    return res
+    .status(200)
+    .cookie("Access Token", accessToken, options)
+    .cookie("refershToken", newRefershToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {accessToken,  refreshToken: newRefershToken},
+        "Access Token Refreshed"
+      )
+    )
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Invaild refersh token")
+  }
+})
+export {registerUser, loginUser, logoutUser, refershAccessToken};
