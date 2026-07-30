@@ -20,9 +20,9 @@ const generateAccessAndRefreshToken = async (userId) => {
     const refreshToken = user.generateRefreshToken();
 
     user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    await user.save({validateBeforeSave: false});
 
-    return { accessToken, refreshToken };
+    return {accessToken, refreshToken};
   } catch (error) {
     console.error("generateAccessAndRefreshToken error:", error);
     throw new ApiError(
@@ -186,45 +186,116 @@ const logoutUser = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .cookie("accessToken", "", { ...options, maxAge: 0 })
-    .cookie("refreshToken", "", { ...options, maxAge: 0 })
+    .cookie("accessToken", "", {...options, maxAge: 0})
+    .cookie("refreshToken", "", {...options, maxAge: 0})
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
-const refershAccessToken = asyncHandler(async (req,res)=>{
-  const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
-  if(!incomingRefreshToken){
-    throw new ApiError(401,"Unauthorized Request")
+const refershAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken;
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Unauthorized Request");
   }
   try {
-    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
-  
-    const user = await User.findById(decodedToken?.id)
-  
-    if(!user){
-       throw new ApiError(401,"Invaild Refersh token")
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decodedToken?.id);
+
+    if (!user) {
+      throw new ApiError(401, "Invaild Refersh token");
     }
-  
-    if(incomingRefreshToken !== user?.refreshToken){
-      throw new ApiError (401, "Refersh Token is expired or used")
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refersh Token is expired or used");
     }
-    const options= {httpOnly:true , secure:true }
-  
-    const {accessToken, newRefershToken} =  await generateAccessAndRefreshToken(user._id)
-  
+    const options = {httpOnly: true, secure: true};
+
+    const {accessToken, newRefershToken} = await generateAccessAndRefreshToken(
+      user._id
+    );
+
     return res
-    .status(200)
-    .cookie("Access Token", accessToken, options)
-    .cookie("refershToken", newRefershToken, options)
-    .json(
-      new ApiResponse(
-        200,
-        {accessToken,  refreshToken: newRefershToken},
-        "Access Token Refreshed"
-      )
-    )
+      .status(200)
+      .cookie("Access Token", accessToken, options)
+      .cookie("refershToken", newRefershToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {accessToken, refreshToken: newRefershToken},
+          "Access Token Refreshed"
+        )
+      );
   } catch (error) {
-    throw new ApiError(401, error?.message || "Invaild refersh token")
+    throw new ApiError(401, error?.message || "Invaild refersh token");
   }
+});
+
+//Change password controller
+const currentPasswordChange = asyncHandler(async (req, res) => {
+  try {
+    //Steps:-
+    // Destruct data from body-> old pwd and new pwd
+    const {newPassword, oldPassword} = req.body;
+
+    //check user is vaild by finding user id in db
+    const user = await User.findById(req.user?._id);
+
+    //check old pwd is correct?
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+    //if pwd is wrong then throw error
+    if (!isPasswordCorrect) {
+      throw new ApiError(400, "Old password is incorrect");
+    }
+
+    //Assign new password to user of password
+    user.password = newPassword;
+
+    //save user without vailidation save
+    await user.save({validationBeforeSave: false});
+
+    //response return
+
+    return res.status(200).json(new ApiResponse(201, {}, "Password Changed "));
+
+  } catch (error) {
+    throw new ApiError(400, "Error during password change.")
+  }
+});
+
+// fetch current user
+const GetCurrentUser = asyncHandler(async(req,res)=>{
+  return res
+  .status(200)
+  .json(200,req.user,"Current User Fetched Successfully")
 })
-export {registerUser, loginUser, logoutUser, refershAccessToken};
+
+//Update USer Details
+const UpdateAccountDetails = asyncHandler( async(req,res)=>{
+
+  const {fullName,email} = req.body
+
+if(!(fullName || email)){
+  throw new ApiError(401,"FullName or email is required.")
+}
+
+const user = User.findByIdAndUpdate( req.user?._id ,  {$set:{ fullName, email}},{new:true}).select(-password)
+
+return res
+.status(200)
+.json(new ApiResponse(400,user,"User Updated Successfully"))
+
+})
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refershAccessToken,
+  currentPasswordChange,
+  GetCurrentUser,
+  UpdateAccountDetails
+};
