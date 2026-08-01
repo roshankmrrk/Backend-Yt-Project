@@ -274,13 +274,12 @@ const GetCurrentUser = asyncHandler(async(req,res)=>{
 })
 
 //Update USer Details
-const UpdateAccountDetails = asyncHandler( async(req,res)=>{
+const UpdateAccountDetails = asyncHandler(async (req, res) => {
+  const {fullName, email} = req.body;
 
-  const {fullName,email} = req.body
-
-if(!(fullName || email)){
-  throw new ApiError(401,"FullName or email is required.")
-}
+  if (!(fullName || email)) {
+    throw new ApiError(401, "FullName or email is required.");
+  }
 
 const user = User.findByIdAndUpdate( req.user?._id ,  {$set:{ fullName, email}},{new:true}).select(-password)
 
